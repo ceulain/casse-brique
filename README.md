@@ -9,7 +9,7 @@ Un jeu de casse-brique en HTML5 Canvas, sans dépendance, avec trois thèmes au 
 **Jouer :** https://ceulain.github.io/casse-brique/
 
 ## Commandes
-- Souris / doigt ou flèches ← → : déplacer la raquette
+- Souris / doigt ou flèches ← → : déplacer la raquette (sur mobile et tablette, des flèches s'affichent sous le jeu)
 - Clic / Espace : lancer la balle
 - P ou Échap : pause
 - T : changer de thème
