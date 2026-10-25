@@ -6,22 +6,42 @@
 <title>Casse-Brique</title>
 <style>
   :root {
-    --bg: #0b1020;
+    --page: radial-gradient(ellipse at top, #1b2350 0%, #0b1020 70%);
     --panel: #141a33;
+    --border: #2a3366;
     --text: #e8ecff;
     --muted: #8a93b8;
     --accent: #5ee7ff;
+    --veil: rgba(8, 11, 26, .72);
+  }
+  body[data-theme="licorne"] {
+    --page: radial-gradient(ellipse at top, #ffe3f3 0%, #e6dcff 70%);
+    --panel: #ffffff;
+    --border: #d0bfff;
+    --text: #5b2a86;
+    --muted: #8a5fb0;
+    --accent: #d6336c;
+    --veil: rgba(255, 240, 250, .8);
+  }
+  body[data-theme="espace"] {
+    --page: radial-gradient(ellipse at top, #2a0f45 0%, #05030d 70%);
+    --panel: #1a1426;
+    --border: #3d2a5c;
+    --text: #f1e9ff;
+    --muted: #a493c2;
+    --accent: #ff922b;
+    --veil: rgba(5, 3, 13, .75);
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%;
-    background: radial-gradient(ellipse at top, #1b2350 0%, var(--bg) 70%);
     color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     overflow: hidden;
     touch-action: none;
     user-select: none;
   }
+  body { background: var(--page); transition: background .3s; }
   #wrap {
     height: 100%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -36,16 +56,15 @@
   #stage { position: relative; width: min(100%, 800px); }
   canvas {
     display: block; width: 100%; height: auto;
-    background: linear-gradient(180deg, #0f1530 0%, #0a0e22 100%);
-    border: 1px solid #2a3366; border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 40px rgba(94,231,255,.05);
+    border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
     cursor: none;
   }
   #overlay {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; text-align: center; padding: 20px;
-    background: rgba(8, 11, 26, .72); border-radius: 12px;
+    background: var(--veil); border-radius: 12px;
     backdrop-filter: blur(3px);
   }
   #overlay.hidden { display: none; }
@@ -55,21 +74,30 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   #overlay p { margin: 0; color: var(--muted); max-width: 440px; line-height: 1.5; }
-  #overlay button {
+  #start {
     font: inherit; font-weight: 700; font-size: 18px;
     padding: 12px 28px; border-radius: 999px; border: 0; cursor: pointer;
     background: linear-gradient(90deg, #ff5e9c, #ffb86b); color: #1a0f1f;
     box-shadow: 0 8px 24px rgba(255, 94, 156, .35);
   }
-  #overlay button:hover { filter: brightness(1.08); }
+  #start:hover { filter: brightness(1.08); }
+  #themes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .theme {
+    font: inherit; font-weight: 600; font-size: 15px;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); color: var(--text);
+    border: 2px solid var(--border);
+  }
+  .theme[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
   .keys { font-size: 13px; color: var(--muted); }
   kbd {
-    background: var(--panel); border: 1px solid #2a3366; border-radius: 4px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
     padding: 1px 6px; font-family: inherit; color: var(--text);
   }
 </style>
 </head>
-<body>
+<body data-theme="foot">
 <div id="wrap">
   <div id="hud">
     <span>Score <b id="score">0</b></span>
@@ -82,8 +110,14 @@
     <div id="overlay">
       <h1>Casse-Brique</h1>
       <p>Détruis toutes les briques sans laisser tomber la balle. Attrape les bonus qui tombent !</p>
+      <div class="label">Thème</div>
+      <div id="themes" role="radiogroup" aria-label="Thème">
+        <button class="theme" role="radio" data-theme="foot">⚽ Foot</button>
+        <button class="theme" role="radio" data-theme="licorne">🦄 Licorne</button>
+        <button class="theme" role="radio" data-theme="espace">☄️ Météorites</button>
+      </div>
       <button id="start">Jouer</button>
-      <div class="keys">Souris / doigt ou <kbd>←</kbd> <kbd>→</kbd> pour bouger · <kbd>Espace</kbd> pour lancer · <kbd>P</kbd> pause · <kbd>M</kbd> son</div>
+      <div class="keys">Souris / doigt ou <kbd>←</kbd> <kbd>→</kbd> pour bouger · <kbd>Espace</kbd> pour lancer · <kbd>P</kbd> pause · <kbd>T</kbd> thème · <kbd>M</kbd> son</div>
     </div>
   </div>
 </div>
@@ -96,6 +130,8 @@
 
   const $ = id => document.getElementById(id);
   const overlay = $('overlay'), startBtn = $('start');
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
 
   // ---------- Audio (WebAudio, pas de fichiers) ----------
   let audio = null, muted = false;
@@ -168,20 +204,12 @@
 
   const COLS = 10, BRICK_GAP = 6, BRICK_TOP = 70, BRICK_H = 24;
   const BRICK_W = (W - BRICK_GAP * (COLS + 1)) / COLS;
-  // Briques en terre cuite, plus foncées quand elles sont plus solides ; 9 = parpaing en béton
-  const COLORS = {
-    1: ['#e0956b', '#bf6844'],
-    2: ['#c96a45', '#a04a2c'],
-    3: ['#a9492f', '#7f3220'],
-    4: ['#843526', '#5c2219'],
-    9: ['#a3a39d', '#74746f'],
-  };
 
   // ---------- État ----------
-  let state = 'menu'; // menu | ready | play | pause | over | win
+  let state = 'menu'; // menu | ready | play | pause | over
   let score = 0, lives = 3, level = 0;
   let bricks = [], balls = [], powerups = [], particles = [];
-  const paddle = { w: 110, baseW: 110, h: 14, x: W / 2 - 55, y: H - 40, speed: 9, wideTimer: 0 };
+  const paddle = { w: 110, baseW: 110, h: 14, x: W / 2 - 55, y: H - 40, speed: 13, wideTimer: 0 };
   let slowTimer = 0, shake = 0;
   const keys = {};
 
@@ -196,7 +224,8 @@
         if (hp !== 9) hp = Math.min(4, hp + loop);
         const x = BRICK_GAP + c * (BRICK_W + BRICK_GAP);
         const y = BRICK_TOP + r * (BRICK_H + BRICK_GAP);
-        // grain de la terre cuite et fissures, tirés une fois pour que le dessin reste stable
+        // détails aléatoires tirés une fois pour que le dessin reste stable : grain, fissures,
+        // contour rocheux et cratères (utilisés selon le thème)
         const specks = Array.from({ length: 14 }, () => ({
           x: Math.random() * BRICK_W, y: Math.random() * BRICK_H,
           s: Math.random() * 1.6 + 0.6, light: Math.random() < 0.5,
@@ -211,21 +240,31 @@
           }
           return pts;
         });
-        bricks.push({ x, y, w: BRICK_W, h: BRICK_H, hp, maxHp: hp, hit: 0, specks, cracks });
+        const jag = [];
+        for (let k = 0; k <= 7; k++) jag.push([k / 7 * BRICK_W, rnd(-1, 3)]);
+        jag.push([BRICK_W + rnd(-2, 2), BRICK_H / 2]);
+        for (let k = 7; k >= 0; k--) jag.push([k / 7 * BRICK_W, BRICK_H + rnd(-3, 1)]);
+        jag.push([rnd(-2, 2), BRICK_H / 2]);
+        const craters = Array.from({ length: 3 }, () => ({ x: rnd(8, BRICK_W - 8), y: rnd(7, BRICK_H - 7), r: rnd(2, 4.5) }));
+        bricks.push({ x, y, row: r, col: c, w: BRICK_W, h: BRICK_H, hp, maxHp: hp, hit: 0, specks, cracks, jag, craters });
       });
     });
   }
 
-  function ballSpeed() { return Math.min(5.5 + level * 0.45, 10); }
+  function ballSpeed() { return Math.min(7.5 + level * 0.6, 13); }
 
-  function newBall(stuck = true) {
-    return { x: paddle.x + paddle.w / 2, y: paddle.y - 13, r: 12, vx: 0, vy: 0, rot: 0, stuck, trail: [] };
+  function makeBall(x, y, vx, vy, stuck) {
+    // forme irrégulière et cratères pour l'astéroïde
+    const shape = Array.from({ length: 12 }, () => rnd(0.8, 1.08));
+    const craters = Array.from({ length: 3 }, () => ({ a: rnd(0, Math.PI * 2), d: rnd(0, 0.5), r: rnd(0.15, 0.28) }));
+    return { x, y, r: 12, vx, vy, rot: 0, stuck, trail: [], shape, craters };
   }
+  function newBall() { return makeBall(paddle.x + paddle.w / 2, paddle.y - 13, 0, 0, true); }
 
   function resetRound() {
     paddle.w = paddle.baseW; paddle.wideTimer = 0; slowTimer = 0;
     paddle.x = W / 2 - paddle.w / 2;
-    balls = [newBall(true)];
+    balls = [newBall()];
     powerups = [];
     state = 'ready';
   }
@@ -265,10 +304,11 @@
   }
 
   // ---------- Effets ----------
-  function burst(x, y, color, n = 12) {
+  function burst(x, y, colors, n = 12) {
+    colors = [].concat(colors);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, s = Math.random() * 4 + 1;
-      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color });
+      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color: pick(colors) });
     }
   }
 
@@ -281,8 +321,7 @@
   function maybeDropPower(x, y) {
     if (Math.random() > 0.16) return;
     const pool = lives < 5 ? POWER_TYPES : POWER_TYPES.filter(p => p.type !== 'life');
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    powerups.push({ ...p, x, y, vy: 2.4, r: 12 });
+    powerups.push({ ...pick(pool), x, y, vy: 3.4, r: 12 });
   }
 
   function applyPower(p) {
@@ -296,7 +335,7 @@
       const s = Math.hypot(src.vx, src.vy) || ballSpeed();
       for (const off of [-0.5, 0.5]) {
         const a = Math.atan2(src.vy || -1, src.vx) + off;
-        balls.push({ x: src.x, y: src.y, r: 12, vx: Math.cos(a) * s, vy: Math.sin(a) * s, rot: 0, stuck: false, trail: [] });
+        balls.push(makeBall(src.x, src.y, Math.cos(a) * s, Math.sin(a) * s, false));
       }
     }
     updateHud();
@@ -331,12 +370,12 @@
     if (slowTimer > 0) slowTimer--;
 
     const speedMul = slowTimer > 0 ? 0.6 : 1;
-    const STEPS = 4; // sous-pas pour éviter que la balle traverse les briques
+    const STEPS = 6; // sous-pas pour éviter que la balle traverse les briques
 
     for (const b of balls) {
       if (b.stuck) { b.x = paddle.x + paddle.w / 2; b.y = paddle.y - b.r - 1; continue; }
-      b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 8) b.trail.shift();
-      b.rot += b.vx * speedMul * 0.04; // le ballon tourne dans le sens où il roule
+      b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 10) b.trail.shift();
+      b.rot += b.vx * speedMul * 0.04; // la balle tourne dans le sens où elle roule
 
       for (let s = 0; s < STEPS; s++) {
         b.x += b.vx * speedMul / STEPS;
@@ -352,7 +391,7 @@
             b.x >= paddle.x - b.r && b.x <= paddle.x + paddle.w + b.r) {
           const hit = ((b.x - paddle.x) / paddle.w) * 2 - 1; // -1 .. 1
           const a = -Math.PI / 2 + Math.max(-1, Math.min(1, hit)) * (Math.PI / 3);
-          const sp = Math.min(Math.hypot(b.vx, b.vy) * 1.01, ballSpeed() * 1.4);
+          const sp = Math.min(Math.hypot(b.vx, b.vy) * 1.015, ballSpeed() * 1.4);
           b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
           b.y = paddle.y - b.r - 0.5;
           beep(440, 0.05, 'triangle');
@@ -367,7 +406,7 @@
             br.hp--;
             if (br.hp <= 0) {
               score += 10 * br.maxHp * (level + 1);
-              burst(br.x + br.w / 2, br.y + br.h / 2, COLORS[br.maxHp][0]);
+              burst(br.x + br.w / 2, br.y + br.h / 2, theme.burst(br));
               maybeDropPower(br.x + br.w / 2, br.y + br.h / 2);
               beep(660 + Math.random() * 200, 0.06);
               shake = 4;
@@ -382,7 +421,7 @@
       }
 
       // évite les trajectoires quasi horizontales qui bloquent le jeu
-      if (Math.abs(b.vy) < 1.2) b.vy = (b.vy < 0 ? -1.2 : 1.2);
+      if (Math.abs(b.vy) < 1.5) b.vy = (b.vy < 0 ? -1.5 : 1.5);
     }
 
     // balles perdues
@@ -419,7 +458,7 @@
     }
   }
 
-  // ---------- Rendu ----------
+  // ---------- Outils de dessin ----------
   function roundRect(x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -439,115 +478,475 @@
     ctx.closePath();
   }
 
-  function drawSoccerBall(b) {
-    const { x, y, r, rot } = b;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.clip();
+  function starPath(cx, cy, outer, inner, rot = 0, points = 5) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const a = rot + i * Math.PI / points - Math.PI / 2;
+      const r = i % 2 ? inner : outer;
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    ctx.closePath();
+  }
 
-    // pentagone central, cinq pentagones autour (coupés par le bord) et les coutures entre eux
-    ctx.fillStyle = '#151515'; ctx.strokeStyle = '#555'; ctx.lineWidth = 0.8;
-    const pr = r * 0.38;
-    pentagon(x, y, pr, rot); ctx.fill();
-    for (let i = 0; i < 5; i++) {
-      const a = rot + i * (Math.PI * 2 / 5) - Math.PI / 2;
-      const ox = x + Math.cos(a) * r * 1.02, oy = y + Math.sin(a) * r * 1.02;
-      pentagon(ox, oy, pr, a + Math.PI / 2 + Math.PI / 5); ctx.fill();
+  function cloud(x, y, s, alpha) {
+    ctx.fillStyle = `rgba(214, 200, 255, ${alpha * 0.6})`;
+    for (const [dx, dy, r] of [[-30, 6, 22], [0, -6, 28], [30, 6, 22], [0, 10, 24]]) {
+      ctx.beginPath(); ctx.arc(x + dx * s, y + (dy + 4) * s, r * s, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    for (const [dx, dy, r] of [[-30, 6, 22], [0, -6, 28], [30, 6, 22], [0, 10, 24]]) {
+      ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  const RAINBOW = ['#ff6b81', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#9775fa', '#f783ac'];
+
+  // Licorne dessinée de profil, tournée vers la droite ; (0, 0) = centre du corps
+  function drawUnicorn(x, y, s, t) {
+    ctx.save();
+    ctx.translate(x, y + Math.sin(t * 0.04) * 3);
+    ctx.scale(s, s);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const outline = '#c9a8e8';
+
+    // queue arc-en-ciel
+    const sway = Math.sin(t * 0.05) * 6;
+    RAINBOW.slice(0, 6).forEach((c, i) => {
+      ctx.strokeStyle = c; ctx.lineWidth = 7;
       ctx.beginPath();
-      ctx.moveTo(x + Math.cos(a) * pr, y + Math.sin(a) * pr);
-      ctx.lineTo(x + Math.cos(a) * r * 0.66, y + Math.sin(a) * r * 0.66);
+      ctx.moveTo(-64, -18 + i * 3);
+      ctx.bezierCurveTo(-105, -40 + i * 5 + sway, -95, 20 + i * 4, -122 + i * 2, 48 + i * 3 + sway);
+      ctx.stroke();
+    });
+
+    // pattes
+    const leg = (lx, shade) => {
+      ctx.fillStyle = shade; ctx.strokeStyle = outline; ctx.lineWidth = 2;
+      roundRect(lx - 7, 18, 14, 58, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f7a8d0';
+      roundRect(lx - 8, 68, 16, 10, 4); ctx.fill();
+    };
+    leg(-38, '#efe6fb'); leg(42, '#efe6fb');
+
+    // corps
+    const body = ctx.createLinearGradient(0, -40, 0, 40);
+    body.addColorStop(0, '#ffffff'); body.addColorStop(1, '#ece2fb');
+    ctx.fillStyle = body; ctx.strokeStyle = outline; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 72, 40, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    leg(-56, '#ffffff'); leg(24, '#ffffff');
+
+    // cou
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(30, -30); ctx.quadraticCurveTo(42, -70, 58, -96);
+    ctx.lineTo(86, -82); ctx.quadraticCurveTo(70, -45, 68, -8);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // crinière arc-en-ciel le long du cou
+    for (let i = 0; i < 9; i++) {
+      const k = i / 8;
+      ctx.fillStyle = RAINBOW[i % 6];
+      ctx.beginPath();
+      ctx.arc(60 - k * 34 - 6, -104 + k * 76, 11 - k * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // tête
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(80, -98, 28, 20, 0.35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(102, -82, 16, 13, 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(90, -90, 18, 14, 0.3, 0, Math.PI * 2); ctx.fill();
+
+    // oreille
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(62, -110); ctx.lineTo(60, -134); ctx.lineTo(74, -116); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f7a8d0';
+    ctx.beginPath(); ctx.moveTo(64, -114); ctx.lineTo(62, -128); ctx.lineTo(70, -117); ctx.closePath(); ctx.fill();
+
+    // corne dorée torsadée
+    const horn = ctx.createLinearGradient(76, -114, 92, -164);
+    horn.addColorStop(0, '#ffd43b'); horn.addColorStop(1, '#fff3bf');
+    ctx.fillStyle = horn; ctx.strokeStyle = '#e8a700'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(72, -116); ctx.lineTo(92, -166); ctx.lineTo(84, -112); ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (let i = 1; i < 4; i++) {
+      const k = i / 4;
+      ctx.beginPath();
+      ctx.moveTo(72 + 20 * k, -116 - 50 * k);
+      ctx.lineTo(84 + 8 * k - 1, -112 - 54 * k + 6);
       ctx.stroke();
     }
+    // mèche sur le front
+    ctx.fillStyle = RAINBOW[5];
+    ctx.beginPath(); ctx.arc(70, -112, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = RAINBOW[0];
+    ctx.beginPath(); ctx.arc(78, -114, 6, 0, Math.PI * 2); ctx.fill();
 
-    // ombrage pour donner du volume
-    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
-    g.addColorStop(0, 'rgba(255,255,255,.35)');
-    g.addColorStop(0.6, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(0,0,0,.35)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    // œil fermé avec cils, joue rose, naseau
+    ctx.strokeStyle = '#5b2a86'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(86, -98, 6, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+    ctx.lineWidth = 1.8;
+    for (const a of [0.25, 0.5, 0.75]) {
+      const ax = 86 + Math.cos(a * Math.PI) * 6, ay = -98 + Math.sin(a * Math.PI) * 6;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + Math.cos(a * Math.PI) * 4, ay + Math.sin(a * Math.PI) * 4); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255, 140, 190, .55)';
+    ctx.beginPath(); ctx.ellipse(96, -86, 7, 4.5, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#c9a8e8';
+    ctx.beginPath(); ctx.arc(111, -80, 2, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
-  function drawBrick(br) {
-    const concrete = br.hp === 9;
-    const [c1, c2] = COLORS[concrete ? 9 : br.hp];
-    ctx.save();
-    // joint de mortier autour de la brique
-    ctx.fillStyle = '#cfc6b4';
-    ctx.fillRect(br.x - 2, br.y - 2, br.w + 4, br.h + 4);
+  // ---------- Thèmes ----------
+  const STARS = Array.from({ length: 130 }, () => ({ x: rnd(0, W), y: rnd(0, H), r: rnd(0.4, 1.6), ph: rnd(0, 6.3), f: rnd(0.02, 0.08) }));
+  const SPARKLES = Array.from({ length: 22 }, () => ({ x: rnd(0, W), y: rnd(20, H - 60), r: rnd(3, 6), ph: rnd(0, 6.3), f: rnd(0.03, 0.07) }));
+  const CLOUDS = Array.from({ length: 6 }, (_, i) => ({ base: i * 170 + rnd(0, 60), y: rnd(30, 420), s: rnd(0.6, 1.2), v: rnd(0.12, 0.35) }));
+  const METEORS = Array.from({ length: 12 }, () => ({ sx: rnd(150, W * 1.5), period: rnd(150, 320), off: rnd(0, 400), len: rnd(70, 150), size: rnd(1.5, 3.5) }));
 
-    const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
-    g.addColorStop(0, c1); g.addColorStop(1, c2);
-    ctx.fillStyle = g;
-    roundRect(br.x, br.y, br.w, br.h, 2); ctx.fill();
+  const THEMES = {
+    foot: {
+      ui: { text: 'rgba(232,236,255,.85)', pause: 'rgba(8,11,26,.6)', pauseText: '#fff', muted: '#8a93b8' },
+      paddle: ['#ff5e9c', '#ffb86b', '#ff5e9c'],
+      bricks: {
+        1: ['#e0956b', '#bf6844'],
+        2: ['#c96a45', '#a04a2c'],
+        3: ['#a9492f', '#7f3220'],
+        4: ['#843526', '#5c2219'],
+        9: ['#a3a39d', '#74746f'],
+      },
+      burst(br) { return this.bricks[br.maxHp][0]; },
+      background() {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#0f1530'); g.addColorStop(1, '#0a0e22');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      },
+      trail(b) {
+        b.trail.forEach((t, i) => {
+          ctx.fillStyle = `rgba(255,255,255,${(i / b.trail.length) * 0.18})`;
+          ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (i / b.trail.length), 0, Math.PI * 2); ctx.fill();
+        });
+      },
+      // ballon de foot
+      ball(b) {
+        const { x, y, r, rot } = b;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.clip();
+        // pentagone central, cinq pentagones autour (coupés par le bord) et les coutures entre eux
+        ctx.fillStyle = '#151515'; ctx.strokeStyle = '#555'; ctx.lineWidth = 0.8;
+        const pr = r * 0.38;
+        pentagon(x, y, pr, rot); ctx.fill();
+        for (let i = 0; i < 5; i++) {
+          const a = rot + i * (Math.PI * 2 / 5) - Math.PI / 2;
+          const ox = x + Math.cos(a) * r * 1.02, oy = y + Math.sin(a) * r * 1.02;
+          pentagon(ox, oy, pr, a + Math.PI / 2 + Math.PI / 5); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(a) * pr, y + Math.sin(a) * pr);
+          ctx.lineTo(x + Math.cos(a) * r * 0.66, y + Math.sin(a) * r * 0.66);
+          ctx.stroke();
+        }
+        // ombrage pour donner du volume
+        const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+        g.addColorStop(0, 'rgba(255,255,255,.35)');
+        g.addColorStop(0.6, 'rgba(255,255,255,0)');
+        g.addColorStop(1, 'rgba(0,0,0,.35)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        ctx.restore();
+      },
+      // briques de construction en terre cuite ; 9 = parpaing en béton
+      brick(br) {
+        const concrete = br.hp === 9;
+        const [c1, c2] = this.bricks[concrete ? 9 : br.hp];
+        ctx.save();
+        // joint de mortier autour de la brique
+        ctx.fillStyle = '#cfc6b4';
+        ctx.fillRect(br.x - 2, br.y - 2, br.w + 4, br.h + 4);
+        const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
+        g.addColorStop(0, c1); g.addColorStop(1, c2);
+        ctx.fillStyle = g;
+        roundRect(br.x, br.y, br.w, br.h, 2); ctx.fill();
+        ctx.beginPath(); ctx.rect(br.x, br.y, br.w, br.h); ctx.clip();
+        // grain de la matière
+        for (const s of br.specks) {
+          ctx.fillStyle = s.light ? 'rgba(255,230,200,.22)' : 'rgba(40,10,0,.25)';
+          ctx.fillRect(br.x + s.x, br.y + s.y, s.s, s.s);
+        }
+        // arête claire en haut, ombre en bas
+        ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(br.x, br.y, br.w, 2);
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(br.x, br.y + br.h - 3, br.w, 3);
+        if (concrete) {
+          // parpaing : deux alvéoles creuses
+          ctx.fillStyle = 'rgba(0,0,0,.28)';
+          const cw = br.w * 0.3, ch = br.h * 0.45;
+          roundRect(br.x + br.w * 0.12, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
+          roundRect(br.x + br.w * 0.58, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
+        } else {
+          drawCracks(br, 'rgba(30,8,2,.75)');
+        }
+        if (br.hit) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(br.x, br.y, br.w, br.h); }
+        ctx.restore();
+      },
+    },
 
-    ctx.beginPath(); ctx.rect(br.x, br.y, br.w, br.h); ctx.clip();
-    // grain de la matière
-    for (const s of br.specks) {
-      ctx.fillStyle = s.light ? 'rgba(255,230,200,.22)' : 'rgba(40,10,0,.25)';
-      ctx.fillRect(br.x + s.x, br.y + s.y, s.s, s.s);
-    }
-    // arête claire en haut, ombre en bas
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(br.x, br.y, br.w, 2);
-    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(br.x, br.y + br.h - 3, br.w, 3);
+    licorne: {
+      ui: { text: '#6a2c91', pause: 'rgba(255,240,250,.6)', pauseText: '#6a2c91', muted: '#8a5fb0' },
+      paddle: ['#f783ac', '#9775fa', '#f783ac'],
+      burst(br) { return br.maxHp === 9 ? ['#ffffff', '#d0bfff'] : [RAINBOW[br.row % 7], '#ffffff', '#ffd43b']; },
+      background(t) {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#ffd1ec'); g.addColorStop(0.55, '#e4d4ff'); g.addColorStop(1, '#c5e9ff');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        // grand arc-en-ciel pâle
+        ctx.lineWidth = 14;
+        RAINBOW.slice(0, 6).forEach((c, i) => {
+          ctx.strokeStyle = c; ctx.globalAlpha = 0.2;
+          ctx.beginPath(); ctx.arc(W * 0.3, H + 60, 420 - i * 14, Math.PI, 2 * Math.PI); ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+        // nuages qui dérivent
+        for (const c of CLOUDS) {
+          const x = ((c.base + t * c.v) % (W + 240)) - 120;
+          cloud(x, c.y, c.s, 0.85);
+        }
+        // étincelles
+        for (const s of SPARKLES) {
+          const a = (Math.sin(t * s.f + s.ph) + 1) / 2;
+          ctx.fillStyle = `rgba(255,255,255,${a * 0.9})`;
+          starPath(s.x, s.y, s.r * a + 1, (s.r * a + 1) * 0.35, 0, 4); ctx.fill();
+        }
+        ctx.globalAlpha = 0.92;
+        drawUnicorn(W - 150, H - 150, 0.85, t);
+        ctx.globalAlpha = 1;
+      },
+      trail(b) {
+        b.trail.forEach((t, i) => {
+          const k = i / b.trail.length;
+          ctx.fillStyle = RAINBOW[i % 7]; ctx.globalAlpha = k * 0.7;
+          starPath(t.x, t.y, 2 + k * 4, 1 + k * 1.5, i); ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      },
+      // étoile dorée
+      ball(b) {
+        const { x, y, r, rot } = b;
+        ctx.save();
+        ctx.shadowColor = '#fff59d'; ctx.shadowBlur = 18;
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r * 1.4);
+        g.addColorStop(0, '#fffbe0'); g.addColorStop(0.5, '#ffd43b'); g.addColorStop(1, '#f59f00');
+        ctx.fillStyle = g;
+        starPath(x, y, r * 1.35, r * 0.6, rot); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.beginPath(); ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.18, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      },
+      // briques arc-en-ciel : une couleur par rangée, une petite étoile par coup restant au-delà du premier
+      brick(br) {
+        ctx.save();
+        if (br.hp === 9) {
+          const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
+          g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#e5dbff');
+          ctx.fillStyle = g; ctx.shadowColor = '#b197fc'; ctx.shadowBlur = 8;
+          roundRect(br.x, br.y, br.w, br.h, 10); ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#b197fc'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.fillStyle = '#b197fc';
+          starPath(br.x + br.w / 2, br.y + br.h / 2, 7, 3); ctx.fill();
+        } else {
+          const c = RAINBOW[br.row % 7];
+          ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 10;
+          roundRect(br.x, br.y, br.w, br.h, 10); ctx.fill();
+          ctx.shadowBlur = 0;
+          const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
+          g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.5, 'rgba(255,255,255,.05)'); g.addColorStop(1, 'rgba(0,0,0,.08)');
+          ctx.fillStyle = g; roundRect(br.x, br.y, br.w, br.h, 10); ctx.fill();
+          ctx.fillStyle = '#fff';
+          const n = br.hp - 1;
+          for (let i = 0; i < n; i++) {
+            starPath(br.x + br.w / 2 + (i - (n - 1) / 2) * 14, br.y + br.h / 2 + 1, 5.5, 2.4); ctx.fill();
+          }
+        }
+        if (br.hit) { ctx.fillStyle = 'rgba(255,255,255,.45)'; roundRect(br.x, br.y, br.w, br.h, 10); ctx.fill(); }
+        ctx.restore();
+      },
+    },
 
-    if (concrete) {
-      // parpaing : deux alvéoles creuses
-      ctx.fillStyle = 'rgba(0,0,0,.28)';
-      const cw = br.w * 0.3, ch = br.h * 0.45;
-      roundRect(br.x + br.w * 0.12, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
-      roundRect(br.x + br.w * 0.58, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
-    } else {
-      // une fissure de plus à chaque coup encaissé
-      ctx.strokeStyle = 'rgba(30,8,2,.75)'; ctx.lineWidth = 1.3;
-      const n = Math.min(br.cracks.length, (br.maxHp - br.hp) * 2);
-      for (let i = 0; i < n; i++) {
-        const pts = br.cracks[i];
+    espace: {
+      ui: { text: 'rgba(241,233,255,.9)', pause: 'rgba(5,3,13,.6)', pauseText: '#fff', muted: '#a493c2' },
+      paddle: ['#5ee7ff', '#9775fa', '#5ee7ff'],
+      rocks: {
+        1: ['#a39587', '#6b6058'],
+        2: ['#8a6f5a', '#5a4536'],
+        3: ['#7a4b3a', '#4a2a20'],
+        4: ['#4b3a44', '#2a1f28'],
+        9: ['#7d93ad', '#3d4a5a'],
+      },
+      burst(br) { return [this.rocks[br.maxHp][0], this.rocks[br.maxHp][1], '#ff922b', '#ffd43b']; },
+      background(t) {
+        const g = ctx.createRadialGradient(W * 0.7, 0, 50, W * 0.5, H * 0.5, H);
+        g.addColorStop(0, '#2a1048'); g.addColorStop(1, '#03020a');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        // étoiles qui scintillent
+        for (const s of STARS) {
+          ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7 * (Math.sin(t * s.f + s.ph) + 1) / 2})`;
+          ctx.fillRect(s.x, s.y, s.r, s.r);
+        }
+        // planète avec anneau
+        const px = 90, py = H - 30;
+        const pg = ctx.createRadialGradient(px - 40, py - 50, 10, px, py, 130);
+        pg.addColorStop(0, '#8e5bd6'); pg.addColorStop(1, '#2a1048');
+        ctx.fillStyle = pg;
+        ctx.beginPath(); ctx.arc(px, py, 120, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 190, 120, .35)'; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.ellipse(px, py, 190, 34, -0.25, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+        // pluie de météorites
+        const dx = -0.55, dy = 0.83;
+        for (const m of METEORS) {
+          const p = ((t + m.off) % m.period) / m.period;
+          const x = m.sx + dx * p * 1000, y = -80 + dy * p * 1000;
+          const tg = ctx.createLinearGradient(x, y, x - dx * m.len, y - dy * m.len);
+          tg.addColorStop(0, 'rgba(255, 220, 170, .95)');
+          tg.addColorStop(0.3, 'rgba(255, 146, 43, .5)');
+          tg.addColorStop(1, 'rgba(255, 80, 40, 0)');
+          ctx.strokeStyle = tg; ctx.lineWidth = m.size; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - dx * m.len, y - dy * m.len); ctx.stroke();
+          ctx.fillStyle = '#fff4e0'; ctx.shadowColor = '#ff922b'; ctx.shadowBlur = 12;
+          ctx.beginPath(); ctx.arc(x, y, m.size * 0.9, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      },
+      // traînée de feu
+      trail(b) {
+        b.trail.forEach((t, i) => {
+          const k = i / b.trail.length;
+          ctx.fillStyle = `rgba(255, ${Math.round(80 + k * 140)}, 40, ${k * 0.45})`;
+          ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (0.4 + k * 0.7), 0, Math.PI * 2); ctx.fill();
+        });
+      },
+      // astéroïde
+      ball(b) {
+        const { x, y, r, rot } = b;
+        ctx.save();
+        ctx.translate(x, y); ctx.rotate(rot);
+        ctx.shadowColor = '#ff922b'; ctx.shadowBlur = 16;
+        const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r * 1.1);
+        g.addColorStop(0, '#c4b5a3'); g.addColorStop(1, '#5e5246');
+        ctx.fillStyle = g;
         ctx.beginPath();
-        pts.forEach(([px, py], k) => k ? ctx.lineTo(br.x + px, br.y + py) : ctx.moveTo(br.x + px, br.y + py));
-        ctx.stroke();
-      }
+        b.shape.forEach((k, i) => {
+          const a = i / b.shape.length * Math.PI * 2;
+          ctx.lineTo(Math.cos(a) * r * k * 1.1, Math.sin(a) * r * k * 1.1);
+        });
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#3b322b'; ctx.lineWidth = 1.2; ctx.stroke();
+        for (const c of b.craters) {
+          const cx = Math.cos(c.a) * c.d * r, cy = Math.sin(c.a) * c.d * r;
+          ctx.fillStyle = 'rgba(40, 30, 25, .55)';
+          ctx.beginPath(); ctx.arc(cx, cy, c.r * r, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(230, 215, 195, .35)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(cx, cy, c.r * r, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+        }
+        ctx.restore();
+      },
+      // murs d'astéroïdes : blocs de roche aux bords irréguliers, avec cratères
+      brick(br) {
+        const metal = br.hp === 9;
+        const [c1, c2] = this.rocks[metal ? 9 : br.hp];
+        ctx.save();
+        ctx.translate(br.x, br.y);
+        const g = ctx.createLinearGradient(0, 0, br.w * 0.3, br.h);
+        g.addColorStop(0, c1); g.addColorStop(1, c2);
+        ctx.fillStyle = g;
+        if (br.hp >= 3 && !metal) { ctx.shadowColor = 'rgba(255, 120, 40, .5)'; ctx.shadowBlur = 8; }
+        if (metal) { ctx.shadowColor = 'rgba(94, 231, 255, .5)'; ctx.shadowBlur = 10; }
+        ctx.beginPath();
+        br.jag.forEach(([px, py]) => ctx.lineTo(px, py));
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.clip();
+        for (const c of br.craters) {
+          ctx.fillStyle = 'rgba(0,0,0,.3)';
+          ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(c.x, c.y, c.r, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+        }
+        if (metal) {
+          // cristaux bleus incrustés
+          ctx.fillStyle = '#9ff3ff';
+          for (const c of br.craters) {
+            ctx.beginPath(); ctx.moveTo(c.x, c.y - 4); ctx.lineTo(c.x + 3, c.y); ctx.lineTo(c.x, c.y + 4); ctx.lineTo(c.x - 3, c.y); ctx.closePath(); ctx.fill();
+          }
+        } else if (br.hp >= 3) {
+          // veines de lave dans les roches les plus dures
+          ctx.strokeStyle = 'rgba(255, 146, 43, .55)'; ctx.lineWidth = 1;
+          ctx.beginPath(); br.cracks[3].forEach(([px, py], k) => k ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.stroke();
+        }
+        ctx.translate(-br.x, -br.y);
+        if (!metal) drawCracks(br, 'rgba(255, 170, 60, .9)');
+        if (br.hit) { ctx.fillStyle = 'rgba(255,220,180,.3)'; ctx.fillRect(br.x - 4, br.y - 4, br.w + 8, br.h + 8); }
+        ctx.restore();
+      },
+    },
+  };
+
+  // une fissure de plus à chaque coup encaissé
+  function drawCracks(br, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.3;
+    const n = Math.min(br.cracks.length, (br.maxHp - br.hp) * 2);
+    for (let i = 0; i < n; i++) {
+      ctx.beginPath();
+      br.cracks[i].forEach(([px, py], k) => k ? ctx.lineTo(br.x + px, br.y + py) : ctx.moveTo(br.x + px, br.y + py));
+      ctx.stroke();
     }
-    if (br.hit) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(br.x, br.y, br.w, br.h); }
-    ctx.restore();
   }
 
-  function draw() {
+  const THEME_ORDER = ['foot', 'licorne', 'espace'];
+  let themeName = 'foot';
+  try { if (THEMES[localStorage.getItem('casse-brique-theme')]) themeName = localStorage.getItem('casse-brique-theme'); } catch (e) {}
+  let theme = THEMES[themeName];
+
+  function setTheme(name) {
+    themeName = name; theme = THEMES[name];
+    document.body.dataset.theme = name;
+    document.querySelectorAll('.theme').forEach(b => b.setAttribute('aria-checked', String(b.dataset.theme === name)));
+    try { localStorage.setItem('casse-brique-theme', name); } catch (e) {}
+  }
+
+  // ---------- Rendu ----------
+  function draw(t) {
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= 0.85; if (shake < .3) shake = 0; }
     ctx.clearRect(-20, -20, W + 40, H + 40);
+    theme.background(t);
 
-    // briques
-    for (const br of bricks) if (br.hp > 0) drawBrick(br);
+    for (const br of bricks) if (br.hp > 0) theme.brick(br);
 
     // bonus
     for (const p of powerups) {
       ctx.fillStyle = p.color; ctx.shadowColor = p.color; ctx.shadowBlur = 14;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
       ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = '#0b1020'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(p.label, p.x, p.y + 1);
     }
 
     // raquette
+    const [p1, p2, glow] = theme.paddle;
     const pg = ctx.createLinearGradient(paddle.x, 0, paddle.x + paddle.w, 0);
-    pg.addColorStop(0, '#ff5e9c'); pg.addColorStop(1, '#ffb86b');
-    ctx.fillStyle = pg; ctx.shadowColor = '#ff5e9c'; ctx.shadowBlur = 16;
+    pg.addColorStop(0, p1); pg.addColorStop(1, p2);
+    ctx.fillStyle = pg; ctx.shadowColor = glow; ctx.shadowBlur = 16;
     roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 7); ctx.fill();
     ctx.shadowBlur = 0;
 
-    // ballons
-    for (const b of balls) {
-      b.trail.forEach((t, i) => {
-        ctx.fillStyle = `rgba(255,255,255,${(i / b.trail.length) * 0.18})`;
-        ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (i / b.trail.length), 0, Math.PI * 2); ctx.fill();
-      });
-      drawSoccerBall(b);
-    }
+    for (const b of balls) { theme.trail(b); theme.ball(b); }
 
     // particules
     for (const pt of particles) {
@@ -558,21 +957,22 @@
     ctx.globalAlpha = 1;
 
     // messages
+    const ui = theme.ui;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (state === 'ready') {
-      ctx.fillStyle = 'rgba(232,236,255,.85)'; ctx.font = '600 20px system-ui';
+      ctx.fillStyle = ui.text; ctx.font = '600 20px system-ui';
       ctx.fillText(`Niveau ${level + 1} — clique ou appuie sur Espace pour lancer`, W / 2, H / 2 + 60);
     }
     if (state === 'pause') {
-      ctx.fillStyle = 'rgba(8,11,26,.6)'; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = '#fff'; ctx.font = '700 42px system-ui'; ctx.fillText('Pause', W / 2, H / 2);
+      ctx.fillStyle = ui.pause; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = ui.pauseText; ctx.font = '700 42px system-ui'; ctx.fillText('Pause', W / 2, H / 2);
     }
     // indicateurs de bonus actifs
     ctx.textAlign = 'left'; ctx.font = '600 13px system-ui';
     let ix = 12;
-    if (paddle.wideTimer > 0) { ctx.fillStyle = '#7cff8a'; ctx.fillText(`Large ${Math.ceil(paddle.wideTimer / 60)}s`, ix, 24); ix += 90; }
-    if (slowTimer > 0) { ctx.fillStyle = '#ffb86b'; ctx.fillText(`Ralenti ${Math.ceil(slowTimer / 60)}s`, ix, 24); ix += 90; }
-    if (muted) { ctx.fillStyle = '#8a93b8'; ctx.textAlign = 'right'; ctx.fillText('Son coupé', W - 12, 24); }
+    if (paddle.wideTimer > 0) { ctx.fillStyle = '#2fb04a'; ctx.fillText(`Large ${Math.ceil(paddle.wideTimer / 60)}s`, ix, 24); ix += 90; }
+    if (slowTimer > 0) { ctx.fillStyle = '#e07a1f'; ctx.fillText(`Ralenti ${Math.ceil(slowTimer / 60)}s`, ix, 24); ix += 90; }
+    if (muted) { ctx.fillStyle = ui.muted; ctx.textAlign = 'right'; ctx.fillText('Son coupé', W - 12, 24); }
 
     ctx.restore();
   }
@@ -585,7 +985,7 @@
       if (state === 'play' || state === 'ready') update();
       acc -= 1000 / 60;
     }
-    draw();
+    draw(now / (1000 / 60));
     requestAnimationFrame(loop);
   }
 
@@ -610,15 +1010,18 @@
       if (state === 'play') state = 'pause';
       else if (state === 'pause') { state = 'play'; last = performance.now(); }
     }
+    if (e.code === 'KeyT') setTheme(THEME_ORDER[(THEME_ORDER.indexOf(themeName) + 1) % THEME_ORDER.length]);
     if (e.code === 'KeyM') muted = !muted;
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') state = 'pause'; });
 
-  startBtn.addEventListener('click', startGame);
+  document.querySelectorAll('.theme').forEach(b => b.addEventListener('click', () => { setTheme(b.dataset.theme); b.blur(); }));
+  startBtn.addEventListener('click', () => { startBtn.blur(); startGame(); });
 
-  buildLevel(0); balls = [newBall(true)]; updateHud();
+  setTheme(themeName);
+  buildLevel(0); balls = [newBall()]; updateHud();
   requestAnimationFrame(loop);
 })();
 </script>

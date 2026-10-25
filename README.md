@@ -1,6 +1,10 @@
 # Casse-Brique
 
-Un jeu de casse-brique en HTML5 Canvas, sans dépendance : un ballon de foot contre un mur de briques.
+Un jeu de casse-brique en HTML5 Canvas, sans dépendance, avec trois thèmes au choix :
+
+- **⚽ Foot** : un ballon de foot contre un mur de briques de construction
+- **🦄 Licorne** : une étoile contre des briques arc-en-ciel, dans un ciel de nuages avec une licorne
+- **☄️ Météorites** : un astéroïde contre des murs d'astéroïdes, sous une pluie de météorites
 
 **Jouer :** https://ceulain.github.io/casse-brique/
 
@@ -8,6 +12,7 @@ Un jeu de casse-brique en HTML5 Canvas, sans dépendance : un ballon de foot con
 - Souris / doigt ou flèches ← → : déplacer la raquette
 - Clic / Espace : lancer la balle
 - P ou Échap : pause
+- T : changer de thème
 - M : couper le son
 
 ## Bonus
