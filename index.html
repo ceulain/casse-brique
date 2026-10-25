@@ -168,12 +168,13 @@
 
   const COLS = 10, BRICK_GAP = 6, BRICK_TOP = 70, BRICK_H = 24;
   const BRICK_W = (W - BRICK_GAP * (COLS + 1)) / COLS;
+  // Briques en terre cuite, plus foncées quand elles sont plus solides ; 9 = parpaing en béton
   const COLORS = {
-    1: ['#5ee7ff', '#2aa9d6'],
-    2: ['#7cff8a', '#2fb04a'],
-    3: ['#ffb86b', '#e07a1f'],
-    4: ['#ff5e9c', '#c42a66'],
-    9: ['#8a93b8', '#4a5276'],
+    1: ['#e0956b', '#bf6844'],
+    2: ['#c96a45', '#a04a2c'],
+    3: ['#a9492f', '#7f3220'],
+    4: ['#843526', '#5c2219'],
+    9: ['#a3a39d', '#74746f'],
   };
 
   // ---------- État ----------
@@ -193,11 +194,24 @@
         let hp = +ch;
         if (!hp) return;
         if (hp !== 9) hp = Math.min(4, hp + loop);
-        bricks.push({
-          x: BRICK_GAP + c * (BRICK_W + BRICK_GAP),
-          y: BRICK_TOP + r * (BRICK_H + BRICK_GAP),
-          w: BRICK_W, h: BRICK_H, hp, maxHp: hp, hit: 0,
+        const x = BRICK_GAP + c * (BRICK_W + BRICK_GAP);
+        const y = BRICK_TOP + r * (BRICK_H + BRICK_GAP);
+        // grain de la terre cuite et fissures, tirés une fois pour que le dessin reste stable
+        const specks = Array.from({ length: 14 }, () => ({
+          x: Math.random() * BRICK_W, y: Math.random() * BRICK_H,
+          s: Math.random() * 1.6 + 0.6, light: Math.random() < 0.5,
+        }));
+        const cracks = Array.from({ length: 4 }, () => {
+          let cx = Math.random() * BRICK_W, cy = Math.random() < 0.5 ? 0 : BRICK_H;
+          const pts = [[cx, cy]];
+          for (let k = 0; k < 4; k++) {
+            cx += (Math.random() - 0.5) * 14;
+            cy += (cy < BRICK_H / 2 ? 1 : -1) * (BRICK_H / 4) * (0.6 + Math.random() * 0.6);
+            pts.push([cx, cy]);
+          }
+          return pts;
         });
+        bricks.push({ x, y, w: BRICK_W, h: BRICK_H, hp, maxHp: hp, hit: 0, specks, cracks });
       });
     });
   }
@@ -205,7 +219,7 @@
   function ballSpeed() { return Math.min(5.5 + level * 0.45, 10); }
 
   function newBall(stuck = true) {
-    return { x: paddle.x + paddle.w / 2, y: paddle.y - 9, r: 8, vx: 0, vy: 0, stuck, trail: [] };
+    return { x: paddle.x + paddle.w / 2, y: paddle.y - 13, r: 12, vx: 0, vy: 0, rot: 0, stuck, trail: [] };
   }
 
   function resetRound() {
@@ -282,7 +296,7 @@
       const s = Math.hypot(src.vx, src.vy) || ballSpeed();
       for (const off of [-0.5, 0.5]) {
         const a = Math.atan2(src.vy || -1, src.vx) + off;
-        balls.push({ x: src.x, y: src.y, r: 8, vx: Math.cos(a) * s, vy: Math.sin(a) * s, stuck: false, trail: [] });
+        balls.push({ x: src.x, y: src.y, r: 12, vx: Math.cos(a) * s, vy: Math.sin(a) * s, rot: 0, stuck: false, trail: [] });
       }
     }
     updateHud();
@@ -322,6 +336,7 @@
     for (const b of balls) {
       if (b.stuck) { b.x = paddle.x + paddle.w / 2; b.y = paddle.y - b.r - 1; continue; }
       b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 8) b.trail.shift();
+      b.rot += b.vx * speedMul * 0.04; // le ballon tourne dans le sens où il roule
 
       for (let s = 0; s < STEPS; s++) {
         b.x += b.vx * speedMul / STEPS;
@@ -415,26 +430,99 @@
     ctx.closePath();
   }
 
+  function pentagon(cx, cy, r, rot) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = rot + i * (Math.PI * 2 / 5) - Math.PI / 2;
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    ctx.closePath();
+  }
+
+  function drawSoccerBall(b) {
+    const { x, y, r, rot } = b;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.clip();
+
+    // pentagone central, cinq pentagones autour (coupés par le bord) et les coutures entre eux
+    ctx.fillStyle = '#151515'; ctx.strokeStyle = '#555'; ctx.lineWidth = 0.8;
+    const pr = r * 0.38;
+    pentagon(x, y, pr, rot); ctx.fill();
+    for (let i = 0; i < 5; i++) {
+      const a = rot + i * (Math.PI * 2 / 5) - Math.PI / 2;
+      const ox = x + Math.cos(a) * r * 1.02, oy = y + Math.sin(a) * r * 1.02;
+      pentagon(ox, oy, pr, a + Math.PI / 2 + Math.PI / 5); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * pr, y + Math.sin(a) * pr);
+      ctx.lineTo(x + Math.cos(a) * r * 0.66, y + Math.sin(a) * r * 0.66);
+      ctx.stroke();
+    }
+
+    // ombrage pour donner du volume
+    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,.35)');
+    g.addColorStop(0.6, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
+  function drawBrick(br) {
+    const concrete = br.hp === 9;
+    const [c1, c2] = COLORS[concrete ? 9 : br.hp];
+    ctx.save();
+    // joint de mortier autour de la brique
+    ctx.fillStyle = '#cfc6b4';
+    ctx.fillRect(br.x - 2, br.y - 2, br.w + 4, br.h + 4);
+
+    const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g;
+    roundRect(br.x, br.y, br.w, br.h, 2); ctx.fill();
+
+    ctx.beginPath(); ctx.rect(br.x, br.y, br.w, br.h); ctx.clip();
+    // grain de la matière
+    for (const s of br.specks) {
+      ctx.fillStyle = s.light ? 'rgba(255,230,200,.22)' : 'rgba(40,10,0,.25)';
+      ctx.fillRect(br.x + s.x, br.y + s.y, s.s, s.s);
+    }
+    // arête claire en haut, ombre en bas
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(br.x, br.y, br.w, 2);
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(br.x, br.y + br.h - 3, br.w, 3);
+
+    if (concrete) {
+      // parpaing : deux alvéoles creuses
+      ctx.fillStyle = 'rgba(0,0,0,.28)';
+      const cw = br.w * 0.3, ch = br.h * 0.45;
+      roundRect(br.x + br.w * 0.12, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
+      roundRect(br.x + br.w * 0.58, br.y + (br.h - ch) / 2, cw, ch, 2); ctx.fill();
+    } else {
+      // une fissure de plus à chaque coup encaissé
+      ctx.strokeStyle = 'rgba(30,8,2,.75)'; ctx.lineWidth = 1.3;
+      const n = Math.min(br.cracks.length, (br.maxHp - br.hp) * 2);
+      for (let i = 0; i < n; i++) {
+        const pts = br.cracks[i];
+        ctx.beginPath();
+        pts.forEach(([px, py], k) => k ? ctx.lineTo(br.x + px, br.y + py) : ctx.moveTo(br.x + px, br.y + py));
+        ctx.stroke();
+      }
+    }
+    if (br.hit) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(br.x, br.y, br.w, br.h); }
+    ctx.restore();
+  }
+
   function draw() {
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= 0.85; if (shake < .3) shake = 0; }
     ctx.clearRect(-20, -20, W + 40, H + 40);
 
     // briques
-    for (const br of bricks) {
-      if (br.hp <= 0) continue;
-      const key = br.hp === 9 ? 9 : br.hp;
-      const [c1, c2] = COLORS[key];
-      const g = ctx.createLinearGradient(0, br.y, 0, br.y + br.h);
-      g.addColorStop(0, c1); g.addColorStop(1, c2);
-      ctx.fillStyle = g;
-      ctx.shadowColor = c1; ctx.shadowBlur = br.hit ? 18 : 8;
-      roundRect(br.x, br.y, br.w, br.h, 5); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255,255,255,.25)';
-      roundRect(br.x + 3, br.y + 3, br.w - 6, 5, 3); ctx.fill();
-      if (br.hit) { ctx.fillStyle = 'rgba(255,255,255,.35)'; roundRect(br.x, br.y, br.w, br.h, 5); ctx.fill(); }
-    }
+    for (const br of bricks) if (br.hp > 0) drawBrick(br);
 
     // bonus
     for (const p of powerups) {
@@ -452,15 +540,13 @@
     roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 7); ctx.fill();
     ctx.shadowBlur = 0;
 
-    // balles
+    // ballons
     for (const b of balls) {
       b.trail.forEach((t, i) => {
-        ctx.fillStyle = `rgba(94,231,255,${(i / b.trail.length) * 0.35})`;
+        ctx.fillStyle = `rgba(255,255,255,${(i / b.trail.length) * 0.18})`;
         ctx.beginPath(); ctx.arc(t.x, t.y, b.r * (i / b.trail.length), 0, Math.PI * 2); ctx.fill();
       });
-      ctx.fillStyle = '#fff'; ctx.shadowColor = '#5ee7ff'; ctx.shadowBlur = 18;
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
+      drawSoccerBall(b);
     }
 
     // particules

@@ -1,6 +1,6 @@
 # Casse-Brique
 
-Un jeu de casse-brique en HTML5 Canvas, sans dépendance.
+Un jeu de casse-brique en HTML5 Canvas, sans dépendance : un ballon de foot contre un mur de briques.
 
 **Jouer :** https://ceulain.github.io/casse-brique/
 
